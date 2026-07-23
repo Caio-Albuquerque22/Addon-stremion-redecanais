@@ -1,11 +1,12 @@
+const { getRouter } = require("stremio-addon-sdk");
 const addonInterface = require("../addon");
 
+// Importamos o roteador oficial do SDK do Stremio
+const router = getRouter(addonInterface);
+
 module.exports = (req, res) => {
-    // Puxa o roteador correto do seu próprio addon
-    const router = addonInterface.getRouter();
-    
-    // O Vercel precisa desse terceiro parâmetro (uma função de fallback) 
-    // para não crashar caso a rota não seja encontrada
+    // Passamos a requisição da Vercel para o roteador do Stremio
+    // O terceiro parâmetro resolve o erro 500 garantindo que a Vercel não quebre
     router(req, res, () => {
         res.statusCode = 404;
         res.end();
