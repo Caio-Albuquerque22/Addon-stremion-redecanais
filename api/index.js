@@ -1,11 +1,5 @@
+const { getRouter } = require("stremio-addon-sdk");
 const addonInterface = require("../addon");
 
-module.exports = (req, res) => {
-    if (req.url === "/" || req.url === "") {
-        res.writeHead(307, { Location: "/manifest.json" });
-        res.end();
-        return;
-    }
-
-    addonInterface.getRouter()(req, res);
-};
+// O getRouter do Stremio gera automaticamente aquela tela visual bonita na rota "/"
+module.exports = getRouter(addonInterface);
