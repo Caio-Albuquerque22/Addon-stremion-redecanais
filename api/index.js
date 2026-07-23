@@ -1,5 +1,13 @@
-const { getRouter } = require("stremio-addon-sdk");
 const addonInterface = require("../addon");
 
-// O getRouter do Stremio gera automaticamente aquela tela visual bonita na rota "/"
-module.exports = getRouter(addonInterface);
+module.exports = (req, res) => {
+    // Puxa o roteador correto do seu próprio addon
+    const router = addonInterface.getRouter();
+    
+    // O Vercel precisa desse terceiro parâmetro (uma função de fallback) 
+    // para não crashar caso a rota não seja encontrada
+    router(req, res, () => {
+        res.statusCode = 404;
+        res.end();
+    });
+};
