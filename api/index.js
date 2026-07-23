@@ -1,14 +1,16 @@
 const express = require("express");
+const cors = require("cors"); // 1. Importa o CORS
 const { getRouter } = require("stremio-addon-sdk");
 const addonInterface = require("../addon");
 
 const app = express();
 
-// 1. Intercepta a rota raiz "/" para mostrar a sua interface customizada
+// 2. Libera o acesso de qualquer origem (essencial para o Stremio)
+app.use(cors());
+
 app.get("/", (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     
-    // Pega o domínio público gerado pelo Vercel dinamicamente
     const host = req.headers.host;
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const manifestUrl = `${protocol}://${host}/manifest.json`;
@@ -25,8 +27,6 @@ app.get("/", (req, res) => {
     `);
 });
 
-// 2. Repassa todas as outras rotas (/manifest.json, /catalog, /stream) para o SDK do Stremio
 app.use("/", getRouter(addonInterface));
 
-// 3. Exporta o app para o Vercel processar como Serverless Function
 module.exports = app;
