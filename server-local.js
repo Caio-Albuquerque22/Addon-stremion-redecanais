@@ -1,8 +1,7 @@
-const { serveHTTP } = require("stremio-addon-sdk");
-const addonInterface = require("./addon");
+const app = require('./api/index');
 
-// Sobe o servidor na porta 7000
-serveHTTP(addonInterface, { port: 7000 });
+const PORT = process.env.PORT || 3000;
 
-console.log("Addon rodando com sucesso!");
-console.log("URL do Manifest: http://127.0.0.1:7000/manifest.json");
+app.listen(PORT, () => {
+    console.log(`Servidor rodando perfeitamente na porta ${PORT}`);
+});
