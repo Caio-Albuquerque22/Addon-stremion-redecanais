@@ -1,3 +1,6 @@
+// Desativa a verificação estrita de SSL para o Render conseguir falar com o site
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const { addonBuilder } = require("stremio-addon-sdk");
 const axios = require("axios");
 const cheerio = require("cheerio");
@@ -24,28 +27,24 @@ const manifest = {
 const builder = new addonBuilder(manifest);
 
 // 2. FUNÇÃO AUXILIAR PARA RASPAGEM (SCRAPING)
-// Reutilizamos a mesma lógica para ler os cartazes, independentemente da categoria
 async function fetchCatalog(url, tipoStremio) {
     try {
         const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
         const $ = cheerio.load(response.data);
         const metas = [];
 
-        // O Rede Canais costuma usar a classe .pm-video-thumb ou .video-list
         $('.pm-video-thumb, .col-md-3').each((index, element) => {
             const title = $(element).find('img').attr('alt') || $(element).find('a').attr('title');
             const link = $(element).find('a').attr('href');
             let poster = $(element).find('img').attr('src');
 
             if (title && link) {
-                // Ajusta o link da imagem se não for absoluto
                 if (poster && !poster.startsWith('http')) poster = `${BASE_URL}/${poster}`;
 
-                // Codificamos a URL do filme/canal em Base64 para não quebrar a rota do Stremio
                 const safeUrl = Buffer.from(link).toString('base64');
                 
                 metas.push({
-                    id: `rc_${tipoStremio}_${safeUrl}`, // Ex: rc_movie_aHR0cHM6Ly...
+                    id: `rc_${tipoStremio}_${safeUrl}`,
                     type: tipoStremio,
                     name: title.trim(),
                     poster: poster,
@@ -64,7 +63,6 @@ async function fetchCatalog(url, tipoStremio) {
 builder.defineCatalogHandler(async ({ type, id }) => {
     let metas = [];
     
-    // Direciona o scraping para a página correta do site baseada no catálogo escolhido
     if (type === "movie" && id === "rc_movies") {
         metas = await fetchCatalog(`${BASE_URL}/browse-filmes-videos-1-date.html`, "movie");
     } else if (type === "series" && id === "rc_series") {
@@ -80,23 +78,18 @@ builder.defineCatalogHandler(async ({ type, id }) => {
 
 // 4. HANDLER DE STREAMS (O PLAYER DE VÍDEO)
 builder.defineStreamHandler(async ({ type, id }) => {
-    // Só processamos se o ID começar com "rc_"
     if (id.startsWith("rc_")) {
         try {
-            // Extrai e decodifica a URL da página do Base64
             const idParts = id.split("_");
-            const encodedUrl = idParts[idParts.length - 1]; // Pega a última parte (o base64)
+            const encodedUrl = idParts[idParts.length - 1];
             const pagePath = Buffer.from(encodedUrl, 'base64').toString('ascii');
             const pageUrl = pagePath.startsWith('http') ? pagePath : `${BASE_URL}/${pagePath}`;
 
-            // Pega o HTML da página do vídeo/canal
             const response = await axios.get(pageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
             const $ = cheerio.load(response.data);
 
-            // Busca iframes de vídeo ou tags source
             let streamUrl = $("iframe").attr("src");
 
-            // Se não for iframe, procura links m3u8 ou mp4 no código usando expressão regular
             if (!streamUrl) {
                 const match = response.data.match(/(https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)/i);
                 if (match) streamUrl = match[1];
@@ -109,7 +102,6 @@ builder.defineStreamHandler(async ({ type, id }) => {
                             title: `Assistir (${type.toUpperCase()})`,
                             url: streamUrl,
                             behaviorHints: {
-                                // Engana o servidor deles para achar que estamos no site oficial
                                 requestHeaders: {
                                     "User-Agent": "Mozilla/5.0",
                                     "Referer": BASE_URL
